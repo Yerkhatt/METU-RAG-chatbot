@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <!-- Add marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            box-sizing: border-box;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 1200px;
+            height: 90vh;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        .messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            max-width: 70%;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            text-align: right;
+            margin-left: auto;
+        }
+        .bot-message {
+            background-color: #f1f1f1;
+            color: black;
+            text-align: left;
+            margin-right: auto;
+        }
+        .input-container {
+            padding: 10px 0;
+        }
+        .input-container input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .input-container button {
+            padding: 10px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+        .bot-message strong,
+        .bot-message b {
+            font-weight: bold;
+        }
+
+        .bot-message ul,
+        .bot-message ol {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+
+        .bot-message li {
+            margin: 5px 0;
+        }
+
+        .bot-message p {
+            margin: 10px 0;
+        }
+
+        .bot-message h1,
+        .bot-message h2,
+        .bot-message h3,
+        .bot-message h4 {
+            margin: 15px 0 10px 0;
+        }
+        .model-selectors {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .model-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .model-selector label {
+            font-size: 12px;
+            color: #666;
+        }
+        .model-selector select {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+        }
+        /* Add new styles for popup */
+        .edit-prompts-btn {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        .prompt-editor {
+            margin-top: 20px;
+        }
+
+        .prompt-selector {
+            margin-bottom: 15px;
+        }
+
+        .prompt-textarea {
+            width: 100%;
+            height: 200px;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
+
+        .save-prompt-btn {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <button class="edit-prompts-btn" onclick="openPromptEditor()">Edit Prompts</button>
+        <div class="model-selectors">
+            <div class="model-selector">
+                <label>Search Model:</label>
+                <select id="search-model"></select>
+            </div>
+            <div class="model-selector">
+                <label>Relevance Model:</label>
+                <select id="relevance-model"></select>
+            </div>
+            <div class="model-selector">
+                <label>Extraction Model:</label>
+                <select id="extraction-model"></select>
+            </div>
+            <div class="model-selector">
+                <label>Answer Model:</label>
+                <select id="answer-model"></select>
+            </div>
+        </div>
+        <div class="messages" id="messages"></div>
+        <div class="input-container">
+            <input type="text" id="input" placeholder="Type your message here...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <!-- Add modal for prompt editing -->
+    <div id="promptModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePromptEditor()">&times;</span>
+            <h2>Edit Prompts</h2>
+            <div class="prompt-editor">
+                <div class="prompt-selector">
+                    <label>Select Phase:</label>
+                    <select id="promptPhaseSelector" onchange="loadPrompt()">
+                        <option value="search">Search Phase</option>
+                        <option value="relevance">Relevance Phase</option>
+                        <option value="extraction">Extraction Phase</option>
+                        <option value="answer">Answer Phase</option>
+                    </select>
+                </div>
+                <textarea id="promptTextarea" class="prompt-textarea"></textarea>
+                <button class="save-prompt-btn" onclick="savePrompt()">Save Prompt</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch available models and populate dropdowns
+        async function loadModels() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/models');
+                const data = await response.json();
+                const models = data.models;
+                
+                const defaultModels = {
+                    'search-model': 'llama-3.1-8b-instant',
+                    'relevance-model': 'llama-3.3-70b-versatile',
+                    'extraction-model': 'llama-3.3-70b-versatile',
+                    'answer-model': 'llama-3.3-70b-versatile'
+                };
+                
+                const selectors = ['search-model', 'relevance-model', 'extraction-model', 'answer-model'];
+                selectors.forEach(id => {
+                    const select = document.getElementById(id);
+                    select.innerHTML = `<option value="">${defaultModels[id]}</option>` + 
+                        models.map(model => `<option value="${model}">${model}</option>`).join('');
+                });
+            } catch (error) {
+                console.error('Error loading models:', error);
+            }
+        }
+
+        // Load models when page loads
+        loadModels();
+
+        async function sendMessage() {
+            const input = document.getElementById('input');
+            const messages = document.getElementById('messages');
+            const message = input.value;
+
+            if (message.trim() === '') return;
+
+            // Display the user's message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user-message';
+            userMessage.textContent = message;
+            messages.appendChild(userMessage);
+
+            // Get selected models
+            const searchModel = document.getElementById('search-model').value;
+            const relevanceModel = document.getElementById('relevance-model').value;
+            const extractionModel = document.getElementById('extraction-model').value;
+            const answerModel = document.getElementById('answer-model').value;
+
+            try {
+                console.log('Sending request to backend...');
+                const response = await fetch('http://127.0.0.1:8000/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query_text: message,
+                        search_model: searchModel,
+                        relevance_model: relevanceModel,
+                        extraction_model: extractionModel,
+                        answer_model: answerModel,
+                        search_prompt: currentPrompts.search,
+                        relevance_prompt: currentPrompts.relevance,
+                        extraction_prompt: currentPrompts.extraction,
+                        answer_prompt: currentPrompts.answer
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Bot response:', data);
+
+                const botMessage = document.createElement('div');
+                botMessage.className = 'message bot-message';
+                // Use marked to parse Markdown
+                botMessage.innerHTML = marked.parse(data.response);
+                messages.appendChild(botMessage);
+            } catch (error) {
+                console.error('Error:', error);
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'message bot-message error';
+                errorMessage.textContent = 'Error: Could not get response from server';
+                messages.appendChild(errorMessage);
+            }
+
+            input.value = '';
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // Add event listener for Enter key
+        document.getElementById('input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        let currentPrompts = {};  // Remove default prompts initialization
+
+        // Add new function to load prompts from backend
+        async function loadPrompts() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/prompts');
+                const data = await response.json();
+                currentPrompts = {
+                    search: data.extract_query_prompt,
+                    relevance: data.relevance_prompt,
+                    extraction: data.extract_info_prompt,
+                    answer: data.answer_prompt
+                };
+                // Load current prompt if editor is open
+                if (document.getElementById('promptModal').style.display === 'block') {
+                    loadPrompt();
+                }
+            } catch (error) {
+                console.error('Error loading prompts:', error);
+            }
+        }
+
+        // Load prompts when page loads
+        loadPrompts();
+
+        function openPromptEditor() {
+            document.getElementById('promptModal').style.display = 'block';
+            loadPrompt();
+        }
+
+        function closePromptEditor() {
+            document.getElementById('promptModal').style.display = 'none';
+        }
+
+        function loadPrompt() {
+            const phase = document.getElementById('promptPhaseSelector').value;
+            document.getElementById('promptTextarea').value = currentPrompts[phase];
+        }
+
+        async function savePrompt() {
+            const phase = document.getElementById('promptPhaseSelector').value;
+            const newPrompt = document.getElementById('promptTextarea').value;
+            currentPrompts[phase] = newPrompt;
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8000/prompts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        relevance_prompt: currentPrompts.relevance,
+                        extract_info_prompt: currentPrompts.extraction,
+                        answer_prompt: currentPrompts.answer,
+                        extract_query_prompt: currentPrompts.search
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    alert('Prompt updated successfully!');
+                } else {
+                    alert('Failed to update prompt on server');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to update prompt: ' + error.message);
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('promptModal');
+            if (event.target == modal) {
+                closePromptEditor();
+            }
+        }
+    </script>
+</body>
+</html>
