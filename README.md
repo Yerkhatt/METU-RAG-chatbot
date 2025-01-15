@@ -22,7 +22,7 @@ Follow these steps to set up the system:
    * Pre-computed embeddings
 4. Create a Groq API Key:
    * Visit Groq's [official website](https://console.groq.com/keys)
-   * Create and account if you don't have it
+   * Create an account if you don't have it
    * Create an API key and save it securely
 5. Configure environment variables
    * Rename `config_template.env` to `config.env`.
