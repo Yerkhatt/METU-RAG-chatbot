@@ -33,3 +33,7 @@ Follow these steps to set up the system:
   * Put the path to the ebmbeddings file inside `dataset_path`
 6. Run `main.py` and open the URL shown in your terminal
 
+This is how chat interface looks like:
+![image](https://github.com/user-attachments/assets/1ea8445c-db90-4c1a-8860-32a682b5b329)
+
+
