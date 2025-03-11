@@ -31,8 +31,8 @@ Follow these steps to set up the system:
    * Rename `config_template.env` to `config.env`.
    * Open the `config.env` file and update it with your details:
      * Put your Groq API key inside `Groq_API_KEY`
-     * Put the path to the dataset inside `sbert_embeddings_path`
-     * Put the path to the ebmbeddings file inside `dataset_path`
+     * Put the path to the dataset inside `dataset_path`
+     * Put the path to the ebmbeddings file inside `sbert_embeddings_path`
 6. Run `main.py` and open the URL shown in your terminal
 
 This is how chat interface looks like:
